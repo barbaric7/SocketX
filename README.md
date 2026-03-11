@@ -6,7 +6,7 @@
 ## 📁 Project Structure
 
 ```
-ChatApp/
+SocketX/
 ├── src/
 │   ├── common/
 │   │   └── Message.java          # Serializable message passed over TCP
@@ -23,7 +23,6 @@ ChatApp/
 │       └── ChatWindow.java       # Main chat interface
 ├── lib/
 │   └── sqlite-jdbc-3.45.1.0.jar # Place SQLite JDBC driver here
-├── pom.xml                       # Maven build file (optional)
 ├── build.sh                      # Linux/macOS build & run script
 ├── build.bat                     # Windows build & run script
 └── README.md
