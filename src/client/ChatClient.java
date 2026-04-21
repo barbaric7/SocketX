@@ -111,6 +111,10 @@ public class ChatClient {
         send(new Message(Type.CHAT_HISTORY, username, null, "BROADCAST"));
     }
 
+    public void requestUserList() {
+        send(new Message(Type.USER_LIST, "Me", null, "REQUEST"));
+    }
+
     public void requestPrivateHistory(String username, String other) {
         send(new Message(Type.CHAT_HISTORY, username, null, other));
     }

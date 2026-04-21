@@ -49,6 +49,7 @@ public class ClientHandler implements Runnable {
                     case PRIVATE       -> handlePrivate(msg);
                     case FILE_REQUEST  -> handleFileTransfer(msg);
                     case CHAT_HISTORY  -> sendChatHistory(msg);
+                    case USER_LIST     -> send(new Message(Type.USER_LIST, "Server", null, String.join(",", clients.keySet())));
                     case LOGOUT        -> { disconnect(); return; }
                     default            -> {}
                 }
@@ -131,21 +132,27 @@ public class ClientHandler implements Runnable {
                     "User '" + msg.getReceiver() + "' is not online."));
         }
     }
-
     private void handleFileTransfer(Message msg) {
-        ClientHandler target = clients.get(msg.getReceiver());
-        if (target != null) {
-            System.out.println("[Server] Routing file '" + msg.getFileName() +
-                               "' from " + username + " to " + msg.getReceiver());
-            target.send(msg);
-            send(new Message(Type.SUCCESS, "Server", username,
-                    "File '" + msg.getFileName() + "' sent to " + msg.getReceiver()));
-        } else {
-            send(new Message(Type.ERROR, "Server", username,
-                    "User '" + msg.getReceiver() + "' is not online."));
+            ClientHandler target = clients.get(msg.getReceiver());
+            if (target != null) {
+                System.out.println("[Server] Routing file '" + msg.getFileName() +
+                                "' from " + username + " to " + msg.getReceiver());
+                target.send(msg);
+                
+                // 1. Create a text log of the file transfer
+                String chatLog = "📎 Sent file: " + msg.getFileName();
+                
+                // 2. Save it to the database so it appears in history
+                db.saveMessage(username, msg.getReceiver(), chatLog);
+                
+                // 3. Echo it back to the sender's UI so they see it instantly
+                send(new Message(Type.PRIVATE, username, msg.getReceiver(), chatLog));
+                
+            } else {
+                send(new Message(Type.ERROR, "Server", username,
+                        "User '" + msg.getReceiver() + "' is not online."));
+            }
         }
-    }
-
     private void sendChatHistory(Message msg) {
         String other = msg.getContent(); // "BROADCAST" or a username
         List<String> history = "BROADCAST".equals(other)

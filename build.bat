@@ -31,15 +31,13 @@ echo [Build] Compiling sources...
 IF EXIST "%OUT%" RMDIR /S /Q "%OUT%"
 MKDIR "%OUT%"
 
+REM Using wildcards to compile all java files in these directories
 javac -cp "%LIB%" -d "%OUT%" ^
-  %SRC%\common\Message.java ^
-  %SRC%\database\DatabaseManager.java ^
-  %SRC%\client\ChatClient.java ^
-  %SRC%\server\ClientHandler.java ^
-  %SRC%\server\ChatServer.java ^
-  %SRC%\gui\Main.java ^
-  %SRC%\gui\LoginWindow.java ^
-  %SRC%\gui\ChatWindow.java
+  %SRC%\common\*.java ^
+  %SRC%\database\*.java ^
+  %SRC%\client\*.java ^
+  %SRC%\server\*.java ^
+  %SRC%\gui\*.java
 
 IF ERRORLEVEL 1 (
     echo [Build] Compilation FAILED.
@@ -64,22 +62,29 @@ echo Main-Class: gui.Main > manifest_client.txt
 jar cfm %JAR_CLIENT% manifest_client.txt -C %OUT% .
 DEL manifest_client.txt
 echo [Build] %JAR_CLIENT% ready.
-
 echo.
-echo Build complete!
-echo   Run server:  java -jar ChatServer.jar
-echo   Run client:  java -jar ChatClient.jar
-echo.
-GOTO END
+echo [Build] Done! You can now run:
+echo         build.bat server
+echo         build.bat client
+pause
+EXIT /B 0
 
+REM ── Run Server ───────────────────────────────────────────────
 :RUN_SERVER
-echo [Run] Starting server...
-java -jar %JAR_SERVER%
-GOTO END
+IF NOT EXIST "%JAR_SERVER%" (
+    echo [Run] %JAR_SERVER% not found. Run build.bat first.
+    pause
+    EXIT /B 1
+)
+java -cp "classes;%LIB%" server.ChatServer
+EXIT /B 0
 
+REM ── Run Client ───────────────────────────────────────────────
 :RUN_CLIENT
-echo [Run] Starting client...
-java -jar %JAR_CLIENT%
-GOTO END
-
-:END
+IF NOT EXIST "%JAR_CLIENT%" (
+    echo [Run] %JAR_CLIENT% not found. Run build.bat first.
+    pause
+    EXIT /B 1
+)
+java -cp "classes;%LIB%" gui.Main
+EXIT /B 0

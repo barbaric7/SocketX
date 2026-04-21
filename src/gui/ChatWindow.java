@@ -15,14 +15,14 @@ import java.nio.file.Files;
  * ChatWindow — the main application window after a successful login.
  *
  * Layout:
- *  ┌─────────────────────────────────────────┐
- *  │  Header bar  (username + status)        │
- *  ├─────────────────┬───────────────────────┤
- *  │  Online Users   │   Chat Area           │
- *  │  (left panel)   │                       │
- *  │                 ├───────────────────────┤
- *  │                 │  Input row            │
- *  └─────────────────┴───────────────────────┘
+ * ┌─────────────────────────────────────────┐
+ * │  Header bar  (username + status)        │
+ * ├─────────────────┬───────────────────────┤
+ * │  Online Users   │   Chat Area           │
+ * │  (left panel)   │                       │
+ * │                 ├───────────────────────┤
+ * │                 │  Input row            │
+ * └─────────────────┴───────────────────────┘
  */
 public class ChatWindow extends JFrame {
 
@@ -57,6 +57,9 @@ public class ChatWindow extends JFrame {
 
         // Ask for broadcast history on open
         client.requestBroadcastHistory(myUsername);
+
+        // Ask for online users once window is ready
+        client.requestUserList();
 
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -137,7 +140,10 @@ public class ChatWindow extends JFrame {
         JButton refreshBtn = new JButton("↻ Refresh");
         refreshBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         refreshBtn.setFocusPainted(false);
-        refreshBtn.addActionListener(e -> client.requestBroadcastHistory(myUsername));
+        refreshBtn.addActionListener(e -> {
+            client.requestBroadcastHistory(myUsername);
+            client.requestUserList(); // Fixes the sync bug!
+        });
         leftPanel.add(refreshBtn, BorderLayout.SOUTH);
 
         split.setLeftComponent(leftPanel);
@@ -177,11 +183,17 @@ public class ChatWindow extends JFrame {
         styleButton(fileBtn,    new Color(255, 152, 0), Color.WHITE);
         styleButton(historyBtn, new Color(96, 125, 139), Color.WHITE);
 
-        JPanel btnPanel = new JPanel(new GridLayout(1, 3, 5, 0));
+        // Clear button
+        JButton clearBtn = new JButton("🗑 Clear");
+        styleButton(clearBtn, new Color(244, 67, 54), Color.WHITE);
+        clearBtn.addActionListener(e -> chatArea.setText(""));
+
+        JPanel btnPanel = new JPanel(new GridLayout(1, 4, 5, 0)); // Changed to accommodate 4 buttons
         btnPanel.setBackground(BG);
         btnPanel.add(sendBtn);
         btnPanel.add(fileBtn);
         btnPanel.add(historyBtn);
+        btnPanel.add(clearBtn);
 
         inputRow.add(inputField, BorderLayout.CENTER);
         inputRow.add(btnPanel,   BorderLayout.EAST);
@@ -348,22 +360,30 @@ public class ChatWindow extends JFrame {
 
     private void promptSaveFile(Message msg) {
         int opt = JOptionPane.showConfirmDialog(this,
-                msg.getSender() + " sent you a file: " + msg.getFileName() +
-                " (" + (msg.getFileSize() / 1024) + " KB)\n\nSave it?",
+                msg.getSender() + " is sending you a file: " + msg.getFileName() +
+                " (" + (msg.getFileSize() / 1024) + " KB)\n\nDo you want to receive it?",
                 "Incoming File", JOptionPane.YES_NO_OPTION);
-        if (opt != JOptionPane.YES_OPTION) return;
-
-        JFileChooser chooser = new JFileChooser();
-        chooser.setSelectedFile(new File(msg.getFileName()));
-        chooser.setDialogTitle("Save file as...");
-        if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File dest = chooser.getSelectedFile();
+                
+        if (opt == JOptionPane.YES_OPTION) {
+            // Find the user's Downloads folder
+            String userHome = System.getProperty("user.home");
+            File downloadsDir = new File(userHome, "Downloads");
+            if (!downloadsDir.exists()) downloadsDir.mkdirs(); // Create it if it somehow doesn't exist
+            
+            File dest = new File(downloadsDir, msg.getFileName());
+            
             try (FileOutputStream fos = new FileOutputStream(dest)) {
                 fos.write(msg.getFileData());
-                showStatus("✅ Saved: " + dest.getAbsolutePath());
+                showStatus("✅ Saved to Downloads: " + msg.getFileName());
+                
+                // Show in chat that it was downloaded
+                appendChat("📎 System: File saved to Downloads -> " + msg.getFileName());
             } catch (IOException ex) {
                 showStatus("❌ Save failed: " + ex.getMessage());
             }
+        } else {
+            // Notify in chat that you declined
+            appendChat("📎 System: You declined the file '" + msg.getFileName() + "' from " + msg.getSender());
         }
     }
 
