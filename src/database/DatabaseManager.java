@@ -178,4 +178,48 @@ public class DatabaseManager {
             System.err.println("[DB] Close error: " + e.getMessage());
         }
     }
+
+    // ── Admin Functions ──────────────────────────────────────────────────────
+
+    /** Fetch all registered usernames. */
+    public List<String> getAllUsernames() {
+        List<String> users = new ArrayList<>();
+        String sql = "SELECT username FROM users ORDER BY username ASC";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                users.add(rs.getString("username"));
+            }
+        } catch (SQLException e) {
+            System.err.println("[DB] Error fetching users: " + e.getMessage());
+        }
+        return users;
+    }
+
+    /** Update a user's password. */
+    public boolean updatePassword(String username, String newPassword) {
+        String sql = "UPDATE users SET password = ? WHERE username = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, newPassword);
+            ps.setString(2, username);
+            int rows = ps.executeUpdate();
+            return rows > 0;
+        } catch (SQLException e) {
+            System.err.println("[DB] Error updating password: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** Delete a user completely. */
+    public boolean deleteUser(String username) {
+        String sql = "DELETE FROM users WHERE username = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, username);
+            int rows = ps.executeUpdate();
+            return rows > 0;
+        } catch (SQLException e) {
+            System.err.println("[DB] Error deleting user: " + e.getMessage());
+            return false;
+        }
+    }
 }

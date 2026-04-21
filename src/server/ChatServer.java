@@ -44,6 +44,10 @@ public class ChatServer {
             System.out.println("╚══════════════════════════════════════╝");
             System.out.println("[Server] Listening on port " + port);
 
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                new ServerAdminWindow(this.db);
+            });
+
             Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
             while (running) {
